@@ -27,15 +27,6 @@ export class AudioCapture {
   async start(onAudioData) {
     this.onAudioData = onAudioData;
 
-    // Create audio context synchronously on user click to avoid autoplay restrictions
-    this.audioContext = new (window.AudioContext || window.webkitAudioContext)({
-      sampleRate: 16000,
-    });
-
-    if (this.audioContext.state === 'suspended') {
-      await this.audioContext.resume();
-    }
-
     // Request screen/tab share with audio — this is how we capture device audio
     // The user must check "Share audio" in the browser picker dialog
     this.stream = await navigator.mediaDevices.getDisplayMedia({
@@ -56,6 +47,11 @@ export class AudioCapture {
 
     // Create an audio-only stream from the audio track
     const audioStream = new MediaStream(audioTracks);
+
+    // Create audio context
+    this.audioContext = new (window.AudioContext || window.webkitAudioContext)({
+      sampleRate: 16000,
+    });
 
     // Source from device audio
     this.sourceNode = this.audioContext.createMediaStreamSource(audioStream);
