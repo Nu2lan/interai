@@ -1268,6 +1268,36 @@ body::before {
   }
 }
 
+/* PiP Button */
+.pip-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--bg-glass);
+  border: 1px solid var(--bg-glass-border);
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.pip-button:hover {
+  color: var(--accent);
+  border-color: rgba(245, 166, 35, 0.2);
+  background: rgba(245, 166, 35, 0.05);
+}
+
+.pip-button--active {
+  color: var(--accent);
+  border-color: rgba(245, 166, 35, 0.3);
+  background: rgba(245, 166, 35, 0.1);
+}
+
 /* Speaking indicator */
 .speaking-indicator {
   display: flex;
