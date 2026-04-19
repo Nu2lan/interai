@@ -8,10 +8,10 @@ export default function AIResponseBox({ conversations, currentAnswer, isThinking
   const scrollRef = useRef(null);
   const [copiedIndex, setCopiedIndex] = useState(null);
 
-  // Auto-scroll to bottom
+  // Auto-scroll to top (newest first)
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      scrollRef.current.scrollTop = 0;
     }
   }, [conversations, currentAnswer]);
 
@@ -45,39 +45,7 @@ export default function AIResponseBox({ conversations, currentAnswer, isThinking
           </div>
         )}
 
-        {/* Answer history */}
-        {conversations.map((conv, i) => (
-          <div key={i} className="conversation-pair">
-            {/* Answer only — questions are in the transcript sidebar */}
-            <div className="conversation-answer">
-              <div className="conversation-answer-header">
-                <div className="conversation-role conversation-role--ai">
-                  <div className="ai-mini-avatar">AI</div>
-                  Assistant
-                </div>
-                <button
-                  className="copy-button"
-                  onClick={() => handleCopy(conv.answer, i)}
-                  title="Copy answer"
-                >
-                  {copiedIndex === i ? (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                  ) : (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                    </svg>
-                  )}
-                </button>
-              </div>
-              <p>{conv.answer}</p>
-            </div>
-          </div>
-        ))}
-
-        {/* Current streaming answer */}
+        {/* Current streaming answer — always on top */}
         {(isThinking || currentAnswer) && (
           <div className="conversation-pair conversation-pair--active">
             {currentAnswer !== undefined && (
@@ -102,6 +70,40 @@ export default function AIResponseBox({ conversations, currentAnswer, isThinking
             )}
           </div>
         )}
+
+        {/* Answer history — newest first */}
+        {[...conversations].reverse().map((conv, i) => {
+          const originalIndex = conversations.length - 1 - i;
+          return (
+            <div key={originalIndex} className="conversation-pair">
+              <div className="conversation-answer">
+                <div className="conversation-answer-header">
+                  <div className="conversation-role conversation-role--ai">
+                    <div className="ai-mini-avatar">AI</div>
+                    Assistant
+                  </div>
+                  <button
+                    className="copy-button"
+                    onClick={() => handleCopy(conv.answer, originalIndex)}
+                    title="Copy answer"
+                  >
+                    {copiedIndex === originalIndex ? (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    ) : (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+                <p>{conv.answer}</p>
+              </div>
+            </div>
+          );
+        })}
 
       </div>
     </div>
