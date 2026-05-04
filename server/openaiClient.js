@@ -51,9 +51,9 @@ export async function* streamAnswer(question, language = 'en', position = '', co
     companyContext,
     jdContext,
     `You are the CANDIDATE answering questions.`,
-    `IMPORTANT: Keep your answers GENERAL. Do NOT mention the company name, job title, or specific requirements from the job posting. Answer naturally as an experienced professional would — show your skills through examples without naming where you are applying.`,
-    `Give real-world examples, mention specific tools and methodologies from your experience.`,
-    `Be confident and convincing. 4 to 8 sentences max.`,
+    `TONE: Be DIRECT and CONCISE. Answer like a real person in an actual interview — natural, confident, and to the point. NO storytelling, NO unnecessary elaboration, NO fluff.`,
+    `STRUCTURE: Give a brief, focused answer in 2-3 sentences. Include one specific example or skill if relevant. That's it.`,
+    `CONTENT: Keep your answers GENERAL. Do NOT mention the company name, job title, or specific requirements from the job posting. Answer naturally as an experienced professional would — show your skills through examples without naming where you are applying.`,
     `TERMINOLOGY RULE: ALL technical and professional terms MUST stay in English. NEVER translate terms like: developer, frontend, backend, fullstack, software engineer, API, database, framework, server, deployment, CI/CD, agile, scrum, sprint, product manager, designer, DevOps, cloud, microservices, REST, GraphQL, etc. Write them exactly in English even when the rest of the sentence is in ${langName}.`,
     `LANGUAGE RULE: Respond ONLY in ${langName} (${language}). NEVER switch languages. But keep technical terminology in English as specified above.`,
     `Never mention you are an AI.`,
@@ -66,8 +66,8 @@ export async function* streamAnswer(question, language = 'en', position = '', co
       { role: 'user', content: question },
     ],
     stream: true,
-    max_tokens: 500,
-    temperature: 0.7,
+    max_tokens: 250,
+    temperature: 0.6,
   });
 
   for await (const chunk of stream) {
