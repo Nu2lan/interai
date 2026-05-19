@@ -60,7 +60,7 @@ export async function* streamAnswer(question, language = 'en', position = '', co
   ].filter(Boolean).join('\n');
 
   const stream = await openai.chat.completions.create({
-    model: 'gpt-4o',
+    model: 'gpt-5.4-mini',
     messages: [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: question },
