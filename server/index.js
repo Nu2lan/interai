@@ -30,20 +30,20 @@ app.post('/api/scrape-job', async (req, res) => {
     }
 
     // --- SSRF protection: validate URL before fetching ---
-    let parsed;
+    let parsedUrl;
     try {
-      parsed = new URL(url);
+      parsedUrl = new URL(url);
     } catch {
       return res.status(400).json({ error: 'Invalid URL format' });
     }
 
     // Only allow http/https schemes
-    if (!['http:', 'https:'].includes(parsed.protocol)) {
+    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
       return res.status(400).json({ error: 'Only HTTP and HTTPS URLs are allowed' });
     }
 
     // Block localhost and private/internal hostnames
-    const hostname = parsed.hostname.toLowerCase();
+    const hostname = parsedUrl.hostname.toLowerCase();
     const blockedPatterns = [
       /^localhost$/,
       /^127\./,
@@ -64,7 +64,7 @@ app.post('/api/scrape-job', async (req, res) => {
     console.log(`[API /scrape-job] Fetching: ${url}`);
 
     // Fetch the page HTML with browser-like headers
-    const response = await fetch(parsed.href, {
+    const response = await fetch(parsedUrl.href, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
@@ -89,16 +89,17 @@ app.post('/api/scrape-job', async (req, res) => {
     const html = await response.text();
 
     // Strip HTML tags and extract text content (limit to 12000 chars for GPT)
+    // Only remove script/style — keep nav/footer since job details can be nested there
     const textContent = html
       .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
       .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-      .replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, '')
-      .replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, '')
       .replace(/<[^>]+>/g, ' ')
       .replace(/&[a-z]+;/gi, ' ')
       .replace(/\s+/g, ' ')
       .trim()
       .substring(0, 12000);
+
+    console.log(`[API /scrape-job] Extracted ${textContent.length} chars of text`);
 
     if (textContent.length < 50) {
       return res.status(400).json({ error: 'Could not extract meaningful text from the URL' });
@@ -111,7 +112,7 @@ app.post('/api/scrape-job', async (req, res) => {
       messages: [
         {
           role: 'system',
-          content: 'You extract job posting data from raw webpage text. Return ONLY a valid JSON object with these fields: "company" (string), "position" (string), "description" (string). IMPORTANT: For the "description" field, copy the ORIGINAL text from the posting as-is. Do NOT summarize, rephrase, or generate new text. Extract the actual requirements, responsibilities, and qualifications sections verbatim from the page. Concatenate them with newlines. Keep up to 2000 characters. If a field cannot be found, use an empty string.',
+          content: 'You extract job posting data from raw webpage text. Return ONLY a valid JSON object with these fields: "company" (string), "position" (string), "description" (string). For the "description" field, extract ALL relevant content from the posting: responsibilities, requirements, qualifications, skills, benefits, and any other job details. Combine them into a single text block, separated by newlines. Keep up to 2000 characters. If a field cannot be found, use an empty string.',
         },
         {
           role: 'user',
@@ -119,12 +120,12 @@ app.post('/api/scrape-job', async (req, res) => {
         },
       ],
       response_format: { type: 'json_object' },
-      max_tokens: 2000,
+      max_completion_tokens: 2000,
       temperature: 0,
     });
 
     const parsed = JSON.parse(completion.choices[0].message.content);
-    console.log(`[API /scrape-job] Extracted: ${parsed.company} — ${parsed.position}`);
+    console.log(`[API /scrape-job] Extracted: company="${parsed.company}", position="${parsed.position}", description=${parsed.description?.length || 0} chars`);
 
     res.json({
       company: parsed.company || '',
@@ -132,11 +133,11 @@ app.post('/api/scrape-job', async (req, res) => {
       description: parsed.description || '',
     });
   } catch (err) {
-    console.error('[API /scrape-job] Error:', err.message);
+    console.error('[API /scrape-job] Error:', err);
     if (err.name === 'TimeoutError' || err.code === 'ABORT_ERR') {
       return res.status(408).json({ error: 'URL request timed out' });
     }
-    res.status(500).json({ error: 'Failed to scrape job posting' });
+    res.status(500).json({ error: err.message || 'Failed to scrape job posting' });
   }
 });
 

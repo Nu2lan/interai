@@ -66,7 +66,7 @@ export async function* streamAnswer(question, language = 'en', position = '', co
       { role: 'user', content: question },
     ],
     stream: true,
-    max_tokens: 250,
+    max_completion_tokens: 250,
     temperature: 0.6,
   });
 
