@@ -121,10 +121,10 @@ interai/
 ├── server/                 # Express backend
 │   ├── index.js            # API routes + static serving
 │   ├── ws.js               # WebSocket handler (Soniox + OpenAI)
+│   ├── sonioxClient.js     # Soniox STT streaming client
 │   └── openaiClient.js     # OpenAI streaming client
 ├── .env.example
-├── railway.json
-├── nixpacks.toml
+├── railway.toml
 └── package.json
 ```
 

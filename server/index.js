@@ -5,7 +5,7 @@ import { createServer } from 'http';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { setupWebSocket } from './ws.js';
-import { streamAnswer } from './openaiClient.js';
+import { streamAnswer, openai } from './openaiClient.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -29,10 +29,42 @@ app.post('/api/scrape-job', async (req, res) => {
       return res.status(400).json({ error: 'Missing "url" field' });
     }
 
+    // --- SSRF protection: validate URL before fetching ---
+    let parsed;
+    try {
+      parsed = new URL(url);
+    } catch {
+      return res.status(400).json({ error: 'Invalid URL format' });
+    }
+
+    // Only allow http/https schemes
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      return res.status(400).json({ error: 'Only HTTP and HTTPS URLs are allowed' });
+    }
+
+    // Block localhost and private/internal hostnames
+    const hostname = parsed.hostname.toLowerCase();
+    const blockedPatterns = [
+      /^localhost$/,
+      /^127\./,
+      /^10\./,
+      /^172\.(1[6-9]|2\d|3[01])\./,
+      /^192\.168\./,
+      /^169\.254\./,
+      /^0\.0\.0\.0$/,
+      /^\[::1?\]$/,
+      /\.local$/,
+      /\.internal$/,
+    ];
+
+    if (blockedPatterns.some(pattern => pattern.test(hostname))) {
+      return res.status(400).json({ error: 'URLs pointing to internal/private networks are not allowed' });
+    }
+
     console.log(`[API /scrape-job] Fetching: ${url}`);
 
     // Fetch the page HTML with browser-like headers
-    const response = await fetch(url, {
+    const response = await fetch(parsed.href, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
@@ -72,9 +104,7 @@ app.post('/api/scrape-job', async (req, res) => {
       return res.status(400).json({ error: 'Could not extract meaningful text from the URL' });
     }
 
-    // Use OpenAI to extract structured job info
-    const { default: OpenAI } = await import('openai');
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    // Use shared OpenAI client to extract structured job info
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
